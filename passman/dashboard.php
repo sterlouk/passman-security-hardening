@@ -1,3 +1,4 @@
+<?php require_once('bootstrap.php'); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,24 +21,22 @@
 
 <?php
 include('test_encrypt.php');
-// Resume existing session (or start a new one)
-session_start();
 
 // If not logged in redirect to login page
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true || $_SESSION['username'] == '') {
+if (!is_logged_in()) {
     header("Location: login.php");
     exit;
 }
 
 $username = $_SESSION['username'];
 
-// Connect to the database
-$conn=mysqli_connect("localhost","root","","pwd_mgr");
-// Check connection
-if (mysqli_connect_errno())	{
-  echo "Failed to connect to MySQL: " . mysqli_connect_error();
-  exit();
+// Every POST on this page changes data, so it must carry the CSRF token
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+	csrf_check();
 }
+
+// Connect to the database
+$conn = db_connect();
 
 // Check if 'Insert-new-website' button is selected
 if(isset($_POST['new_website'], $_POST['new_username'], $_POST['new_password']) && 
@@ -53,7 +52,7 @@ if(isset($_POST['new_website'], $_POST['new_username'], $_POST['new_password']) 
 
 	// Insert new web site
 	//$sql_query = "INSERT INTO websites (login_user_id,web_url,web_username,web_password) VALUES " .
-				"((SELECT id FROM login_users WHERE username='{$username}'),'{$new_website}','{$new_username}','{$new_password}');";
+	//			"((SELECT id FROM login_users WHERE username='{$username}'),'{$new_website}','{$new_username}','{$new_password}');";
 	//echo $sql_query;
 	//$result = $conn->query($sql_query);
 
@@ -83,9 +82,11 @@ if(isset($_POST['delete_website']) && trim($_POST["websiteid"] != '')) {
 	//echo $sql_query;
 	//$result = $conn->query($sql_query);
 
-	$sql_query = "DELETE FROM websites WHERE webid=?;";
+	// Only delete the entry if it belongs to the logged-in user (prevents IDOR:
+	// without this check any user could delete anyone's entry by changing websiteid)
+	$sql_query = "DELETE FROM websites WHERE webid=? AND login_user_id=(SELECT id FROM login_users WHERE username=?);";
 	$statement = mysqli_prepare($conn, $sql_query);
-	mysqli_stmt_bind_param($statement, 's', $webid);
+	mysqli_stmt_bind_param($statement, 'ss', $webid, $username);
 	mysqli_stmt_execute($statement);
 	//$result = mysqli_stmt_get_result($statement);
 	mysqli_stmt_close($statement);
@@ -120,7 +121,7 @@ if (!empty($result) && $result->num_rows >= 1) {
 		echo	"<tr style='background-color: #f4f4f4;'><td colspan=2>" . htmlspecialchars($row["web_url"]) . "</td></tr>" . 
 				"<tr><td>Username: " . htmlspecialchars($row["web_username"]) . "</td><td>Password: " . htmlspecialchars($row["web_password"]) . "</td></tr>";
 
-		echo	"<tr><td><form method='POST' style='height: 3px'>" . 
+		echo	"<tr><td><form method='POST' style='height: 3px'>" . csrf_field() .
 				"<input type='hidden' name='websiteid' value='" . htmlspecialchars($row["webid"]) . "'>" .
 				"<button type='submit' name='delete_website'>Delete</button></form></td></tr>";
 
@@ -141,6 +142,7 @@ $conn -> close();
 <body>
 	<p/>
 	<form method="POST" action="dashboard.php">
+		<?php echo csrf_field(); ?>
         <input type="text" name="new_website" placeholder="website"><br />
         <input type="text" name="new_username" placeholder="Username"><br />
         <input type="password" name="new_password" placeholder="Password"><br />

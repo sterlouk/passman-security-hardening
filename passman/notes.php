@@ -1,3 +1,4 @@
+<?php require_once('bootstrap.php'); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,24 +71,20 @@
 </head>
 
 <?php
-// Resume existing session (or start a new one)
-session_start();
-
 // If not logged in redirect to login page
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true || $_SESSION['username'] == '') {
+if (!is_logged_in()) {
     header("Location: login.php");
     exit;
 }
 
 $username = $_SESSION['username'];
 
-// Connect to the database
-$conn=mysqli_connect("localhost","root","","pwd_mgr");
-// Check connection
-if (mysqli_connect_errno())	{
-  echo "Failed to connect to MySQL: " . mysqli_connect_error();
-  exit();
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+	csrf_check();
 }
+
+// Connect to the database
+$conn = db_connect();
 
 // Check if new note is entered and add it
 if(isset($_POST['new_note']) && trim($_POST['new_note']) !='') {
@@ -172,6 +169,7 @@ $conn -> close();
 <body>
 	<p/>
 	<form method="POST">
+		<?php echo csrf_field(); ?>
 		<label for="note">Enter your note:</label><br>
         <textarea id="note" name="new_note" placeholder="Write your note here..." required></textarea><br><br>
         <button type="submit">Submit Note</button>

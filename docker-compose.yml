@@ -1,0 +1,29 @@
+# Local lab setup: http://localhost:8080/passman/
+# Not intended for production (no HTTPS, development credentials).
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+      MARIADB_DATABASE: pwd_mgr
+      MARIADB_USER: passman
+      MARIADB_PASSWORD: ${DB_PASS:-passman-dev-only}
+    volumes:
+      - ./passman/create-pwd_mgr-db-withData.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      retries: 20
+
+  web:
+    build: .
+    environment:
+      DB_HOST: db
+      DB_USER: passman
+      DB_PASS: ${DB_PASS:-passman-dev-only}
+      DB_NAME: pwd_mgr
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy

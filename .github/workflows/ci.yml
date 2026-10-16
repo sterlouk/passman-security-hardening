@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax check
+        run: find passman -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  security-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start app and database
+        run: docker compose up -d --build --wait
+      - name: Wait for the web server
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8080/passman/login.php && exit 0
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+      - name: Run security regression tests
+        run: bash tests/security_test.sh http://localhost:8080/passman
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs

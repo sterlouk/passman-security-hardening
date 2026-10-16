@@ -1,24 +1,19 @@
 <?php
-// Resume existing session (or start a new one)
-session_start();
+require_once('bootstrap.php');
 
 // Destroy the session in case of using session-based authentication
-session_unset();	// Unset all session variables
+$_SESSION = [];		// Unset all session variables (including the encryption key)
+$params = session_get_cookie_params();
+setcookie(session_name(), '', [
+	'expires' => time() - 3600,
+	'path' => $params['path'],
+	'secure' => $params['secure'],
+	'httponly' => $params['httponly'],
+	'samesite' => $params['samesite'],
+]);			// Remove the session cookie from the browser
 session_destroy();	// Destroy the session
 
 //redirect to the login page
-echo '<script>window.location.href = "login.php";</script>';
+header("Location: login.php");
 exit();
-
-/*
-if (session_status() !== PHP_SESSION_ACTIVE) :void
-{
-  session_start();
-  session_unset();
-  session_destroy();
-  session_write_close();
-  setcookie(session_name(), '', 0, '/');
-  session_regenerate_id(true);
-}
-*/
 ?>
