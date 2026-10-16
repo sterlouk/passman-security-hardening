@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSS for Password Manager</title>
+</head>
+
+<body>
+    <h3>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;XSS for Password Manager</h3>
+
+
+	<br />
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List of pages:
+	<br />
+	<ul>
+		<li>
+			Get a cookie: <a href="http://localhost/passman/xss/getcookie.php">getcookie.php</a>
+			<br /><i>used by XSS javascripts as: http://localhost/passman/xss/getcookie.php?v=PHPSESSID=o1mg400lipd2mck69kpfnl6p5s</i>
+		</li>
+		<br />
+		<li>
+			File of stolen cookies: <a href="stolencookies.txt">stolencookies.txt</a>
+		</li>
+		<br />
+		<li>
+			List all cookies: <a href="http://localhost/passman/xss/listcookies.php">listcookies.php</a>
+		</li>
+		<br />
+		<li>
+			Use of a cookie: <a href="http://localhost/passman/xss/usecookie.php">usecookie.php</a>
+			<br /><i>used by listcookies.php as http://localhost/passman/xss/usecookie.php?v=3h9ug308730bfugjjse0dbmcjr</i>
+		</li>
+	</ul>
+</body>
+</html>
