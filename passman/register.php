@@ -1,3 +1,4 @@
+<?php require_once('bootstrap.php'); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,37 +10,30 @@
     <h3>New user registration</h3>
 
 <?php
-include('test_hash.php');
-
-// Start a new session (or resume an existing one)
-session_start();
-
 // Check if the user is already logged in
-if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true && $_SESSION['username'] !== '') {
+if (is_logged_in()) {
 	echo "<font color=red>You are already logged in!</font></br>";
 	echo "Please <a href='logout.php'>logout</a> first";
     exit;
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+	csrf_check();
 	if(!isset($_POST['new_username'], $_POST['new_password']) || trim($_POST['new_username']) =='' || trim($_POST['new_password']) == '') {
 		$login_message = "Missing username or password.";
+	}
+	else if (strlen(trim($_POST['new_password'])) > MAX_PASSWORD_BYTES) {
+		$login_message = "Password must be at most " . MAX_PASSWORD_BYTES . " bytes.";
 	}
 	else {
 		// Get user submitted information
 		$new_username = trim($_POST['new_username']);
 		$new_password = trim($_POST['new_password']);
-		$getHasedPwd = getPasswordHash_Hex($new_username, $new_password);
-		$new_password = $getHasedPwd['hash']; //only save the hashed password and not the 'salt'
-		mysqli_report(MYSQLI_REPORT_OFF);  // disable exceptions
+		// Slow, randomly salted hash (bcrypt) instead of a single SHA-256 round
+		$new_password = password_hash($new_password, PASSWORD_DEFAULT);
 
 		// Connect to the database
-		$conn=mysqli_connect("localhost","root","","pwd_mgr");
-		// Check connection
-		if (mysqli_connect_errno())	{
-		  echo "Failed to connect to MySQL: " . mysqli_connect_error();
-		  exit();
-		}
+		$conn = db_connect();
 
 		// Insert a new user
 		//comment out this line and make prepared statement
@@ -76,6 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 	<p/>
 	<form method="POST" action="register.php">
+		<?php echo csrf_field(); ?>
         <input type="text" name="new_username" placeholder="Username"><br />
         <input type="password" name="new_password" placeholder="Password"><br />
         <button type="submit">Register</button>

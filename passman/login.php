@@ -1,3 +1,4 @@
+<?php require_once('bootstrap.php'); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,17 +11,15 @@
 include('test_hash.php');
 include('test_encrypt.php');
 
-// Start a new session (or resume an existing one)
-session_start();
-
 // Check if the user is already logged in
-if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true && $_SESSION['username'] !== '') {
+if (is_logged_in()) {
     // Redirect to the dashboard page
     header("Location: dashboard.php");
     exit;
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+	csrf_check();
 	if(!isset($_POST['username'], $_POST['password']) || trim($_POST['username']) =='' || trim($_POST['password']) == '') {
 		$login_message = "Missing username or password.";
 	}
@@ -29,17 +28,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		// Get user submitted information
 		$username = trim($_POST['username']);
 		$password = trim($_POST['password']);
-		//key derivation to encrypt/decrypt data in dashboard.php
-		$key = $_SESSION['encryption_key'] = deriveEncryptionKey($username, $password);
-		$getHasedPwd = getPasswordHash_Hex($username, $password);
-		$password = $getHasedPwd['hash'];
 		// Connect to the database
-		$conn=mysqli_connect("localhost","root","","pwd_mgr");
-		// Check connection
-		if (mysqli_connect_errno())	{
-		  echo "Failed to connect to MySQL: " . mysqli_connect_error();
-		  exit();
-		}
+		$conn = db_connect();
 
 		// xxx' OR 1=1; -- '
 		//$sql_query = "SELECT * FROM login_users WHERE username='{$username}' AND password='{$password}';";
@@ -47,25 +37,53 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		// Check if the credentials are valid
 		//$result = $conn->query($sql_query);
 
-		$sql_query = "SELECT * FROM login_users WHERE username= ? AND password= ? ;";
+		// Look the user up by name only; the password is checked in PHP
+		$sql_query = "SELECT id, username, password FROM login_users WHERE username= ? ;";
 		$statement = mysqli_prepare($conn, $sql_query);
-		mysqli_stmt_bind_param($statement, "ss", $username, $password);
+		mysqli_stmt_bind_param($statement, "s", $username);
 		mysqli_stmt_execute($statement);
 		$result = mysqli_stmt_get_result($statement);
+		$row = $result ? $result->fetch_assoc() : null;
 		mysqli_stmt_close($statement);
 
+		$valid = false;
+		if ($row && strlen($password) <= MAX_PASSWORD_BYTES) {
+			// The lookup is case-insensitive, so continue with the spelling stored at
+			// registration: the encryption key depends on the exact username
+			$username = $row['username'];
+			if (password_verify($password, $row['password'])) {
+				$valid = true;
+			} else {
+				// Accounts created before the bcrypt migration store the
+				// old SHA-256 hash: accept it once and upgrade it in place
+				$legacy = getPasswordHash_Hex($username, $password);
+				if (hash_equals($row['password'], $legacy['hash'])) {
+					$valid = true;
+					$new_hash = password_hash($password, PASSWORD_DEFAULT);
+					$update = mysqli_prepare($conn, "UPDATE login_users SET password=? WHERE id=?;");
+					mysqli_stmt_bind_param($update, "si", $new_hash, $row['id']);
+					mysqli_stmt_execute($update);
+					mysqli_stmt_close($update);
+				}
+			}
+		}
 
-		
 		unset($_POST['username']);
 		unset($_POST['password']);
 
-		if (!empty($result) && $result->num_rows >= 1) {
+		if ($valid) {
 			// Regenerate session ID to prevent session fixation!
-			//session_regenerate_id(true);
+			if (!session_regenerate_id(true)) {
+				error_log("session_regenerate_id failed during login");
+				http_response_code(500);
+				exit("Login failed, please try again.");
+			}
 
 			// Successfully logged in
 			$_SESSION['username'] = $username;
 			$_SESSION['loggedin'] = true;
+			// Key derivation to encrypt/decrypt data in dashboard.php (only after a successful login)
+			$_SESSION['encryption_key'] = deriveEncryptionKey($username, $password);
 
 			//while ($row = $result -> fetch_assoc()) {
 			//	print_r($row);
@@ -91,6 +109,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
     <h3>Password Manager</h3>
     <form method="POST" action="">
+        <?php echo csrf_field(); ?>
         <input type="text" name="username" placeholder="Username" required><br />
         <input type="password" name="password" placeholder="Password"><br />
         <button type="submit">Login</button>

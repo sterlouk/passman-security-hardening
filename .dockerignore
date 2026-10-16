@@ -1,0 +1,5 @@
+# Attacker-side XSS lab tooling must not be served from the app origin
+passman/xss/
+.git/
+docs/
+tests/
