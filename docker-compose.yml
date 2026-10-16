@@ -9,6 +9,7 @@ services:
       MARIADB_USER: passman
       MARIADB_PASSWORD: ${DB_PASS:-passman-dev-only}
     volumes:
+      - db-data:/var/lib/mysql
       - ./passman/create-pwd_mgr-db-withData.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
@@ -27,3 +28,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+volumes:
+  db-data:

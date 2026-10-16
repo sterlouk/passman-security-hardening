@@ -14,7 +14,7 @@ was to attack it, fix what you found, and document the results.
    IDOR that let any user delete anyone else's saved passwords. I fixed those too, along with CSRF,
    session fixation, cookie flags, bcrypt and security headers.
 3. **Added an end-to-end test suite** that attacks the running app, plus a Docker setup and CI. Run
-   against the original submission, the suite fails the 9 checks for the follow-up issues.
+   against the original submission, the suite fails the 12 checks for the follow-up issues.
 
 Full details, including what is still *not* fixed: **[SECURITY.md](SECURITY.md)**.
 Original reports (with screenshots): [English](docs/report-en.pdf) · [Greek](docs/report-gr.pdf).
@@ -43,7 +43,7 @@ bash tests/security_test.sh http://localhost:8080/passman
 [CSRF]
   PASS  delete without CSRF token is refused (403)
   ...
-21 passed, 0 failed
+26 passed, 0 failed
 ```
 
 Without Docker: the app also runs on XAMPP like the course setup. Copy `passman/` into `htdocs`, import
@@ -58,6 +58,7 @@ passman/                 the application
   login.php register.php dashboard.php notes.php logout.php
   test_hash.php test_encrypt.php   hashing / AES-GCM helpers provided by the course
   xss/                   attacker-side pages for the XSS exercise (cookie collector), not part of the app
+                         and left out of the Docker image
 tests/security_test.sh   black-box security regression tests (bash + curl)
 docs/                    submitted reports
 ```

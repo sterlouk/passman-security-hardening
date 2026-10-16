@@ -28,7 +28,7 @@ jobs:
           docker compose logs
           exit 1
       - name: Run security regression tests
-        run: bash tests/security_test.sh http://localhost:8080/passman
+        run: EXPECT_NO_XSS_TOOLS=1 bash tests/security_test.sh http://localhost:8080/passman
       - name: Show logs on failure
         if: failure()
         run: docker compose logs

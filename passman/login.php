@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		//$result = $conn->query($sql_query);
 
 		// Look the user up by name only; the password is checked in PHP
-		$sql_query = "SELECT id, password FROM login_users WHERE username= ? ;";
+		$sql_query = "SELECT id, username, password FROM login_users WHERE username= ? ;";
 		$statement = mysqli_prepare($conn, $sql_query);
 		mysqli_stmt_bind_param($statement, "s", $username);
 		mysqli_stmt_execute($statement);
@@ -47,7 +47,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		mysqli_stmt_close($statement);
 
 		$valid = false;
-		if ($row) {
+		if ($row && strlen($password) <= MAX_PASSWORD_BYTES) {
+			// The lookup is case-insensitive, so continue with the spelling stored at
+			// registration: the encryption key depends on the exact username
+			$username = $row['username'];
 			if (password_verify($password, $row['password'])) {
 				$valid = true;
 			} else {
@@ -70,7 +73,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 		if ($valid) {
 			// Regenerate session ID to prevent session fixation!
-			session_regenerate_id(true);
+			if (!session_regenerate_id(true)) {
+				error_log("session_regenerate_id failed during login");
+				http_response_code(500);
+				exit("Login failed, please try again.");
+			}
 
 			// Successfully logged in
 			$_SESSION['username'] = $username;

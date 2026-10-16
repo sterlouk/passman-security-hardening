@@ -26,6 +26,11 @@ ini_set('session.use_strict_mode', '1');	// reject session IDs the server did no
 ini_set('session.use_only_cookies', '1');
 session_start();
 
+// bcrypt only uses the first 72 bytes of a password, while the encryption key
+// is derived from all of it; longer passwords would let two different
+// passwords log in to the same account with different keys
+const MAX_PASSWORD_BYTES = 72;
+
 function is_logged_in() {
 	return isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true && $_SESSION['username'] !== '';
 }
@@ -43,7 +48,8 @@ function csrf_field() {
 }
 
 function csrf_check() {
-	if (!isset($_POST['csrf_token'], $_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+	if (!isset($_POST['csrf_token'], $_SESSION['csrf_token']) || !is_string($_POST['csrf_token'])
+		|| !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
 		http_response_code(403);
 		exit("Invalid or missing CSRF token.");
 	}

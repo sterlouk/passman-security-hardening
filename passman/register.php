@@ -22,6 +22,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 	if(!isset($_POST['new_username'], $_POST['new_password']) || trim($_POST['new_username']) =='' || trim($_POST['new_password']) == '') {
 		$login_message = "Missing username or password.";
 	}
+	else if (strlen(trim($_POST['new_password'])) > MAX_PASSWORD_BYTES) {
+		$login_message = "Password must be at most " . MAX_PASSWORD_BYTES . " bytes.";
+	}
 	else {
 		// Get user submitted information
 		$new_username = trim($_POST['new_username']);
